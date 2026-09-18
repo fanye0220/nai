@@ -799,14 +799,6 @@
       display: none !important;
     }
 
-    /* Auto Danbooru artwork previews */
-    .auto-artwork-thumb { position:relative; overflow:hidden; cursor:pointer; }
-    .auto-artwork-thumb .thumb-img { cursor:pointer; }
-    .auto-artwork-badge { position:absolute; left:6px; bottom:6px; padding:2px 6px; border-radius:999px; font-size:10px; line-height:1.2; background:rgba(0,0,0,.68); color:#fff; pointer-events:none; }
-    .auto-artwork-refresh { border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim); border-radius:10px; padding:7px 10px; cursor:pointer; margin-left:8px; }
-    .auto-artwork-refresh:hover { color:#fff; }
-    .auto-artwork-loading { display:flex; align-items:center; justify-content:center; min-width:92px; height:92px; border:1px dashed var(--border); border-radius:12px; color:var(--text-dim); font-size:11px; }
-
     /* Danbooru Direct Jump & Reverse Lookup Modal */
     .d-gallery-modal {
       background: var(--bg-surface);
@@ -1559,7 +1551,24 @@
       .lightbox-nav-btn.next { right: 10px; }
       .lightbox-content { padding: 50px 10px; }
     }
-  </style>
+  
+    /* Automatic Danbooru artist gallery */
+    .auto-gallery-wrap { margin-top: 12px; }
+    .auto-gallery-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 8px 2px; }
+    .auto-gallery-title { font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px; font-weight:600; }
+    .auto-gallery-title .dot { width:6px; height:6px; border-radius:50%; background:var(--accent,#8b5cf6); display:inline-block; }
+    .auto-refresh-btn { border:1px solid var(--border,#2b3342); background:rgba(255,255,255,.04); color:var(--text-muted); border-radius:8px; padding:5px 9px; font-size:11px; cursor:pointer; }
+    .auto-refresh-btn:hover { color:#fff; background:rgba(255,255,255,.08); }
+    .auto-gallery-reel { display:flex; gap:10px; overflow-x:auto; padding:2px 0 8px; scrollbar-width:thin; }
+    .auto-thumb { flex:0 0 150px; height:190px; border-radius:12px; overflow:hidden; background:#090d14; border:1px solid rgba(255,255,255,.07); position:relative; cursor:pointer; }
+    .auto-thumb img { width:100%; height:100%; display:block; object-fit:cover; transition:transform .18s ease; }
+    .auto-thumb:hover img { transform:scale(1.03); }
+    .auto-thumb .auto-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:12px; text-align:center; color:var(--text-dim); font-size:11px; }
+    .auto-thumb .auto-index { position:absolute; right:6px; bottom:6px; padding:2px 5px; border-radius:6px; background:rgba(0,0,0,.6); color:#fff; font-size:10px; }
+    .auto-gallery-status { font-size:11px; color:var(--text-dim); padding:6px 2px; }
+    @media (max-width:600px) { .auto-thumb { flex-basis:130px; height:170px; } }
+
+</style>
 </head>
 <body>
 
@@ -1863,6 +1872,11 @@ var activeLightboxIndex = 0;
 var activeLightboxArtistName = "";
 
 var detectedArtists = [];
+
+// Runtime-only cache for automatic Danbooru artwork.
+// Deliberately NOT saved to localStorage, so existing artist data stays untouched.
+var autoArtworkCache = Object.create(null);
+var autoArtworkLoading = Object.create(null);
 
 function uid() {
   return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
@@ -3124,62 +3138,129 @@ function updateSingleArtistCard(artistId) {
   oldCard.parentElement.replaceChild(newCard, oldCard);
 }
 
-async function fetchDanbooruArtworkPreview(artist, limit) {
-  limit = limit || 12;
-  var tag = String(artist.name || "").trim().replace(/\s+/g, "_");
-  if (!tag) return [];
-  var url = "https://danbooru.donmai.us/posts.json?tags=" + encodeURIComponent(tag) + "+-animated&limit=" + limit + "&only=id,preview_file_url,large_file_url,file_url";
-  try {
-    var res = await fetch(url, { mode: "cors", cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    var posts = await res.json();
-    if (!Array.isArray(posts)) return [];
-    return posts.filter(function(p){ return p && p.id && (p.preview_file_url || p.large_file_url || p.file_url); }).map(function(p){
-      return {
-        id: p.id,
-        preview: p.preview_file_url || p.large_file_url || p.file_url,
-        large: p.large_file_url || p.file_url || p.preview_file_url,
-        url: "https://danbooru.donmai.us/posts/" + p.id
-      };
-    });
-  } catch (e) {
-    console.warn("Danbooru 自动作品获取失败:", artist.name, e);
-    return [];
-  }
+
+function getArtistTagForPosts(artist) {
+  return String((artist && artist.name) || "").trim().replace(/\s+/g, "_");
 }
 
-function renderAutoDanbooruArtworks(artist, reel, addThumbBtn) {
-  var old = reel.querySelectorAll(".auto-artwork-thumb, .auto-artwork-loading, .auto-artwork-error");
-  old.forEach(function(el){ el.remove(); });
+async function fetchArtistArtwork(artist, forceRefresh) {
+  var key = String(artist.id || artist.name || "");
+  if (!forceRefresh && Array.isArray(autoArtworkCache[key])) return autoArtworkCache[key];
+  if (autoArtworkLoading[key]) return autoArtworkLoading[key];
 
-  var loading = document.createElement("div");
-  loading.className = "auto-artwork-loading";
-  loading.textContent = "正在获取作品…";
-  reel.insertBefore(loading, addThumbBtn);
+  var tag = getArtistTagForPosts(artist);
+  if (!tag) return [];
+  var url = "https://danbooru.donmai.us/posts.json?tags=" + encodeURIComponent(tag) + "&limit=12&only=id,preview_file_url,large_file_url,file_url,source";
 
-  fetchDanbooruArtworkPreview(artist, 12).then(function(posts){
-    loading.remove();
-    if (!posts.length) return;
-    posts.forEach(function(post){
-      var thumb = document.createElement("div");
-      thumb.className = "thumb-card auto-artwork-thumb";
-      thumb.title = "打开 D 站作品 #" + post.id;
+  autoArtworkLoading[key] = fetch(url, { mode: "cors", headers: { "Accept": "application/json" } })
+    .then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function (posts) {
+      var list = Array.isArray(posts) ? posts : [];
+      var works = list.map(function (post) {
+        var imageUrl = post.preview_file_url || post.large_file_url || post.file_url || "";
+        if (!imageUrl) return null;
+        return {
+          id: post.id,
+          imageUrl: imageUrl,
+          postUrl: "https://danbooru.donmai.us/posts/" + post.id,
+          source: post.source || ""
+        };
+      }).filter(Boolean);
+      autoArtworkCache[key] = works;
+      return works;
+    })
+    .catch(function () {
+      autoArtworkCache[key] = [];
+      return [];
+    })
+    .finally(function () {
+      delete autoArtworkLoading[key];
+    });
+
+  return autoArtworkLoading[key];
+}
+
+function appendAutoArtworkSection(card, artist) {
+  var wrap = document.createElement("div");
+  wrap.className = "auto-gallery-wrap";
+  wrap.dataset.artistId = artist.id;
+
+  var head = document.createElement("div");
+  head.className = "auto-gallery-head";
+  var title = document.createElement("div");
+  title.className = "auto-gallery-title";
+  title.innerHTML = '<span class="dot"></span><span>画师作品（自动获取）</span>';
+  head.appendChild(title);
+
+  var refresh = document.createElement("button");
+  refresh.type = "button";
+  refresh.className = "auto-refresh-btn";
+  refresh.textContent = "刷新";
+  refresh.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    delete autoArtworkCache[artist.id];
+    var old = Array.prototype.find.call(card.querySelectorAll('.auto-gallery-wrap'), function (el) { return el.dataset.artistId === String(artist.id); });
+    if (old) old.remove();
+    appendAutoArtworkSection(card, artist);
+  });
+  head.appendChild(refresh);
+  wrap.appendChild(head);
+
+  var status = document.createElement("div");
+  status.className = "auto-gallery-status";
+  status.textContent = "正在获取画师作品…";
+  wrap.appendChild(status);
+
+  var reel = document.createElement("div");
+  reel.className = "auto-gallery-reel";
+  reel.style.display = "none";
+  wrap.appendChild(reel);
+
+  // Put automatic artwork above the user's manual screenshots.
+  var screenshotsContainer = card.querySelector(".screenshots-container");
+  if (screenshotsContainer) card.insertBefore(wrap, screenshotsContainer);
+  else card.appendChild(wrap);
+
+  fetchArtistArtwork(artist, false).then(function (works) {
+    if (!wrap.isConnected) return;
+    if (!works.length) {
+      status.textContent = "暂时没有可显示的 D 站作品（不影响你下面的手动截图）";
+      return;
+    }
+    status.style.display = "none";
+    reel.style.display = "flex";
+    works.forEach(function (work, idx) {
+      var a = document.createElement("a");
+      a.className = "auto-thumb";
+      a.href = work.postUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.title = "打开 D 站作品 #" + work.id;
+
       var img = document.createElement("img");
-      img.className = "thumb-img";
-      img.alt = artist.name + " D 站作品";
       img.loading = "lazy";
-      img.referrerPolicy = "no-referrer";
-      img.src = post.preview;
-      img.onerror = function(){ thumb.remove(); };
-      thumb.addEventListener("click", function(){
-        window.open(post.url, "_blank", "noopener,noreferrer");
-      });
-      var badge = document.createElement("span");
-      badge.className = "auto-artwork-badge";
-      badge.textContent = "D 站";
-      thumb.appendChild(img);
-      thumb.appendChild(badge);
-      reel.insertBefore(thumb, addThumbBtn);
+      img.decoding = "async";
+      img.alt = artist.name + " D 站作品";
+      img.src = work.imageUrl;
+      img.onerror = function () {
+        // Some CDN URLs can fail independently. Try the larger/original file once if available.
+        if (work.imageUrl !== work.source && work.source && /^https?:\/\//i.test(work.source)) {
+          img.src = work.source;
+        } else {
+          a.innerHTML = '<span class="auto-fallback">图片加载失败<br>点击打开作品</span>';
+        }
+      };
+      a.appendChild(img);
+
+      var idxBadge = document.createElement("span");
+      idxBadge.className = "auto-index";
+      idxBadge.textContent = "#" + work.id;
+      a.appendChild(idxBadge);
+      reel.appendChild(a);
     });
   });
 }
@@ -3333,11 +3414,10 @@ function createArtistCardElement(artist) {
   addThumbBtn.addEventListener("click", function () { triggerImageUpload(artist.id); });
   reel.appendChild(addThumbBtn);
 
-  // 自动展示该画师在 Danbooru 的作品；不改动原有截图数据。
-  renderAutoDanbooruArtworks(artist, reel, addThumbBtn);
-
   screenshotsContainer.appendChild(reel);
   card.appendChild(screenshotsContainer);
+
+  appendAutoArtworkSection(card, artist);
 
   // Card Paste Support
   card.tabIndex = 0;
