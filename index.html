@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>画师串 · 提示词画师收集与自动图库</title>
+  <title>画师串 · 提示词画师收集与参考图库</title>
   <style>
     :root {
       --bg-base: #0a0d14;
@@ -524,6 +524,27 @@
       color: #c4b5fd;
     }
 
+    .d-lookup-btn {
+      font-size: 12px;
+      font-weight: 600;
+      color: #c4b5fd;
+      background: rgba(139, 92, 246, 0.14);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      padding: 3px 10px;
+      border-radius: 99px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+    }
+    .d-lookup-btn:hover {
+      background: rgba(139, 92, 246, 0.28);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
     .d-site-link-btn {
       font-size: 12px;
       font-weight: 500;
@@ -635,6 +656,95 @@
       border-color: var(--danger);
     }
 
+    /* Screenshots Reel & Thumbnails */
+    .screenshots-container {
+      width: 100%;
+    }
+
+    .screenshots-reel {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 4px 2px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    }
+
+    .thumb-card {
+      position: relative;
+      width: 170px;
+      height: 170px;
+      border-radius: var(--btn-radius);
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #000;
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .thumb-card:hover {
+      border-color: var(--primary);
+      transform: scale(1.02);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    }
+    .thumb-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .thumb-del-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      border-radius: 99px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+    .thumb-card:hover .thumb-del-btn {
+      opacity: 1;
+    }
+    .thumb-del-btn:hover {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .add-thumb-btn {
+      width: 170px;
+      height: 170px;
+      border-radius: var(--btn-radius);
+      border: 2px dashed rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: var(--transition);
+      text-align: center;
+      padding: 10px;
+    }
+    .add-thumb-btn:hover, .add-thumb-btn.drag-over {
+      border-color: var(--primary);
+      background: rgba(139, 92, 246, 0.08);
+      color: #c4b5fd;
+    }
+
     /* Dropdowns */
     .dropdown-menu {
       position: absolute;
@@ -672,7 +782,7 @@
     }
 
     /* Modals & Overlays */
-    .modal-overlay, .d-gallery-modal-overlay, .ai-modal-overlay {
+    .modal-overlay, .d-gallery-modal-overlay, .ai-modal-overlay, .lightbox {
       position: fixed;
       inset: 0;
       background: rgba(4, 6, 12, 0.85);
@@ -685,7 +795,7 @@
       padding: 20px;
       animation: fadeIn 0.2s ease;
     }
-    .modal-overlay.hidden, .d-gallery-modal-overlay.hidden, .ai-modal-overlay.hidden, .hidden {
+    .modal-overlay.hidden, .d-gallery-modal-overlay.hidden, .ai-modal-overlay.hidden, .lightbox.hidden, .hidden {
       display: none !important;
     }
 
@@ -1118,6 +1228,65 @@
       white-space: nowrap;
     }
 
+    /* Lightbox */
+    .lightbox {
+      flex-direction: column;
+      padding: 0;
+    }
+    .lightbox-topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+      z-index: 10;
+    }
+    .lightbox-content {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+    }
+    .lightbox-content img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: var(--btn-radius);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.8);
+      user-select: none;
+    }
+    .lightbox-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 99px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+      z-index: 10;
+    }
+    .lightbox-nav-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .lightbox-nav-btn.prev { left: 24px; }
+    .lightbox-nav-btn.next { right: 24px; }
+
     /* Toast */
     .toast {
       position: fixed;
@@ -1203,7 +1372,7 @@
         display: none;
       }
 
-      /* Hero Input Card on Mobile */
+      /* Hero Input Card on Mobile: Grid Layout (Row 1: Switcher + Input; Row 2: Full-width Button; Row 3: Filter) */
       .hero-card {
         padding: 12px;
         gap: 8px;
@@ -1293,6 +1462,11 @@
         top: 14px;
         right: 14px;
       }
+      
+      .thumb-card, .add-thumb-btn {
+        width: 140px;
+        height: 140px;
+      }
 
       /* Modal Header and Body on Mobile */
       .d-gallery-modal, .ai-modal {
@@ -1368,6 +1542,14 @@
         padding: 8px 10px;
         font-size: 11.5px;
       }
+
+      .lightbox-nav-btn {
+        width: 40px;
+        height: 40px;
+      }
+      .lightbox-nav-btn.prev { left: 10px; }
+      .lightbox-nav-btn.next { right: 10px; }
+      .lightbox-content { padding: 50px 10px; }
     }
   
     /* Automatic Danbooru artist gallery */
@@ -1397,8 +1579,8 @@
         <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       </div>
       <div class="brand-titles">
-        <h1>画师串 <span id="statsPill" class="stats-pill">0 位画师</span></h1>
-        <p>收藏画师与自动图库 · 点击画师名即可复制</p>
+        <h1>画师串 <span id="statsPill" class="stats-pill">0 位画师 · 0 张参考图</span></h1>
+        <p>收藏画师与 D 站作品参考 · 点击画师名即可复制</p>
       </div>
     </div>
     <div class="header-actions">
@@ -1406,16 +1588,16 @@
         <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
         <span class="btn-text">AI 画师串分析器</span>
       </button>
-      <button id="refreshCountsBtn" class="ghost icon-only-mobile" title="批量获取/刷新画师在 Danbooru 的作品数">
+      <button id="refreshWorksBtn" class="ghost icon-only-mobile" title="刷新所有画师的 D 站作品展示">
         <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        <span class="btn-text">刷新数量</span>
+        <span class="btn-text">刷新作品</span>
       </button>
-      <button id="importBtn" class="ghost icon-only-mobile" title="从 JSON 文件恢复画师串">
+      <button id="importBtn" class="ghost icon-only-mobile" title="从 JSON 文件恢复画师数据">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span class="btn-text">导入 JSON</span>
       </button>
       <input id="importInput" type="file" accept=".json,application/json" style="display:none">
-      <button id="exportBtn" class="ghost icon-only-mobile" title="导出完整 JSON 备份">
+      <button id="exportBtn" class="ghost icon-only-mobile" title="导出画师数据备份">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span class="btn-text">导出备份</span>
       </button>
@@ -1482,6 +1664,31 @@
   <!-- Artists List Grid -->
   <div id="artistsGrid" class="artists-grid"></div>
 </main>
+
+<!-- Hidden Upload Input for Adding Images -->
+<!-- Lightbox Modal -->
+<div id="lightbox" class="lightbox hidden">
+  <div class="lightbox-topbar">
+    <div class="lightbox-info">
+      <span id="lightboxTitle" style="font-size:15px; font-weight:600;">画师参考图</span>
+      <span id="lightboxIndex" class="stats-pill" style="margin-left:8px;">1 / 1</span>
+    </div>
+    <button id="lightboxClose" class="action-icon-btn" style="width:36px; height:36px; border-radius:99px; background:rgba(255,255,255,0.1);" title="关闭 (Esc)">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <button id="lightboxPrev" class="lightbox-nav-btn prev" title="上一张 (←)">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button id="lightboxNext" class="lightbox-nav-btn next" title="下一张 (→)">
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+
+  <div class="lightbox-content">
+    <img id="lightboxImg" alt="截图预览">
+  </div>
+</div>
 
 <!-- AI Prompt Analyzer Modal -->
 <div id="aiModal" class="ai-modal-overlay hidden">
@@ -1601,6 +1808,12 @@
             <span>加入画师串</span>
           </button>
         </div>
+
+        <!-- Tip -->
+        <div class="d-tip-banner">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>提示：在 D 站截图后，回到主页按 <strong>Ctrl+V</strong> 即可保存参考图</span>
+        </div>
       </div>
 
       <!-- Not Found / Fallback View -->
@@ -1639,15 +1852,26 @@
 var V1 = "artist-thread-data-v1";
 var V2 = "artist-thread-data-v2";
 var CAT_KEY = "artist-thread-categories-v1";
+var DB_NAME = "artist-thread-db";
+var STORE = "images";
 
 var artists = [];
 var categories = [];
 var currentCategory = "";
 var query = "";
+
+var db = null;
+var useIdb = false;
 var activeDropdown = null;
+
+var activeLightboxList = [];
+var activeLightboxIndex = 0;
+var activeLightboxArtistName = "";
+
 var detectedArtists = [];
 
 // Runtime-only cache for automatic Danbooru artwork.
+// Deliberately NOT saved to localStorage, so existing artist data stays untouched.
 var autoArtworkCache = Object.create(null);
 var autoArtworkLoading = Object.create(null);
 
@@ -1663,6 +1887,86 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function openDb() {
+  return new Promise(function (resolve, reject) {
+    if (typeof indexedDB === "undefined") { reject(new Error("no idb")); return; }
+    var req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = function (e) {
+      var d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE, { keyPath: "id" });
+    };
+    req.onsuccess = function (e) { db = e.target.result; resolve(); };
+    req.onerror = function (e) { reject(e.target.error); };
+  });
+}
+
+function idbPut(id, blob) {
+  return new Promise(function (resolve, reject) {
+    if (!db) { reject(new Error("no db")); return; }
+    var tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put({ id: id, blob: blob });
+    tx.oncomplete = function () { resolve(); };
+    tx.onerror = function () { reject(tx.error); };
+  });
+}
+
+function idbGet(id) {
+  return new Promise(function (resolve, reject) {
+    if (!db) { reject(new Error("no db")); return; }
+    var req = db.transaction(STORE, "readonly").objectStore(STORE).get(id);
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error); };
+  });
+}
+
+function idbDelete(id) {
+  return new Promise(function (resolve, reject) {
+    if (!db) { reject(new Error("no db")); return; }
+    var tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = function () { resolve(); };
+    tx.onerror = function () { reject(tx.error); };
+  });
+}
+
+function idbClear() {
+  return new Promise(function (resolve, reject) {
+    if (!db) { reject(new Error("no db")); return; }
+    var tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = function () { resolve(); };
+    tx.onerror = function () { reject(tx.error); };
+  });
+}
+
+async function dataUrlToBlob(dataUrl) {
+  if (!dataUrl) return null;
+  if (typeof fetch === "function") {
+    try {
+      var res = await fetch(dataUrl);
+      if (res && res.ok) return await res.blob();
+    } catch (e) {}
+  }
+  var parts = dataUrl.split(",");
+  if (parts.length !== 2) return null;
+  var meta = parts[0];
+  var mime = "image/jpeg";
+  if (meta.indexOf("data:") === 0 && meta.indexOf(";") !== -1) mime = meta.slice(5, meta.indexOf(";"));
+  var binary = atob(parts[1]);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+function blobToDataUrl(blob) {
+  return new Promise(function (resolve, reject) {
+    var r = new FileReader();
+    r.onload = function () { resolve(r.result); };
+    r.onerror = function () { reject(r.error); };
+    r.readAsDataURL(blob);
+  });
 }
 
 function loadCategories() {
@@ -1696,6 +2000,12 @@ function save() {
   updateStatsPill();
 }
 
+function getImageCount(a) {
+  if (Array.isArray(a.imageIds)) return a.imageIds.length;
+  if (Array.isArray(a.images)) return a.images.length;
+  return 0;
+}
+
 function updateStatsPill() {
   var pill = document.getElementById("statsPill");
   if (!pill) return;
@@ -1715,7 +2025,8 @@ function normalizeArtist(a) {
 function loadAllDataCompatibility() {
   loadCategories();
   var mergedArtists = [];
-  var artistMap = new Map();
+  var seenIds = new Set();
+  var seenNames = new Set();
 
   var keysToTry = [
     V2,
@@ -1736,10 +2047,11 @@ function loadAllDataCompatibility() {
           parsed.forEach(function (a) {
             if (!a || !a.name) return;
             var cleanName = (a.name || "").trim().toLowerCase();
-            
-            if (!artistMap.has(cleanName)) {
+            var id = a.id || uid();
+            if (!seenNames.has(cleanName) && !seenIds.has(id)) {
+              seenNames.add(cleanName);
+              seenIds.add(id);
               normalizeArtist(a);
-              artistMap.set(cleanName, a);
               mergedArtists.push(a);
             }
           });
@@ -1749,6 +2061,40 @@ function loadAllDataCompatibility() {
   });
 
   artists = mergedArtists;
+}
+
+async function migrateLegacy() {
+  if (localStorage.getItem(V2) || localStorage.getItem("artist_thread_data_v2")) return;
+  var raw = localStorage.getItem(V1) || localStorage.getItem("artist_thread_data");
+  if (!raw) return;
+  var old = [];
+  try { old = JSON.parse(raw); } catch (e) { return; }
+  if (!Array.isArray(old)) return;
+  var migrated = [];
+  for (var i = 0; i < old.length; i++) {
+    var a = old[i];
+    var imageIds = [];
+    var imgs = Array.isArray(a.images) ? a.images : [];
+    for (var j = 0; j < imgs.length; j++) {
+      var img = imgs[j];
+      var id = img.id || uid();
+      var blob = await dataUrlToBlob(img.data);
+      if (blob) {
+        try { await idbPut(id, blob); imageIds.push(id); } catch (e) {}
+      }
+    }
+    migrated.push({
+      id: a.id || uid(),
+      name: a.name,
+      url: a.url,
+      category: a.category || "",
+      tags: Array.isArray(a.tags) ? a.tags : [],
+      imageIds: imageIds,
+      postCount: typeof a.postCount === "number" ? a.postCount : null
+    });
+  }
+  artists = migrated;
+  save();
 }
 
 var toastTimer = null;
@@ -1822,27 +2168,32 @@ async function refreshArtistCount(artist, countEl) {
   }
 }
 
-async function refreshAllCounts() {
+async function refreshAllArtwork() {
   if (!artists.length) {
     showToast("当前画师串为空");
     return;
   }
-  showToast("正在批量获取 D站 作品数…");
-  var updated = 0;
-  for (var i = 0; i < artists.length; i++) {
-    var a = artists[i];
-    var count = await fetchPostCount(a.name);
-    if (typeof count === "number") {
-      a.postCount = count;
-      updated++;
-    }
-    if (i % 3 === 2) await new Promise(function (r) { setTimeout(r, 200); });
-  }
-  save();
-  render();
-  showToast("🎉 已更新 " + updated + " 位画师的作品数！");
-}
 
+  showToast("正在刷新所有画师作品…");
+  var updated = 0;
+
+  for (var i = 0; i < artists.length; i++) {
+    var artist = artists[i];
+    try {
+      var key = String(artist.id || artist.name || "");
+      delete autoArtworkCache[key];
+      var works = await fetchArtistArtwork(artist, true);
+      if (Array.isArray(works) && works.length) updated++;
+    } catch (e) {}
+
+    if (i % 3 === 2) {
+      await new Promise(function (resolve) { setTimeout(resolve, 180); });
+    }
+  }
+
+  render();
+  showToast("🎨 已刷新 " + updated + " 位画师的作品！");
+}
 function makeDanbooruUrl(name) {
   var tag = name.trim().replace(/\s+/g, "_");
   return "https://danbooru.donmai.us/posts?tags=" + encodeURIComponent(tag);
@@ -2202,7 +2553,9 @@ function renderDanbooruHubCard(profile, postCount) {
           url: makeDanbooruUrl(profile.name),
           category: currentCategory || "",
           tags: Array.isArray(profile.other_names) ? profile.other_names : [],
-          postCount: typeof postCount === "number" ? postCount : null
+          postCount: typeof postCount === "number" ? postCount : null,
+          imageIds: [],
+          images: []
         };
         artists.unshift(newArtist);
         save();
@@ -2237,7 +2590,7 @@ function renderDanbooruNotFound(rawQuery, cleanTag) {
 
   notFoundCard.style.display = "flex";
   document.getElementById("dNotFoundTitle").textContent = "未在别名库中匹配到「" + rawQuery + "」";
-  document.getElementById("dNotFoundDesc").textContent = "该社媒链接可能在 Danbooru 收录的名称不同，或尚未收录。您可以直接在 D 站按标签「" + cleanTag + "」搜索，或直接以此名称入库。";
+  document.getElementById("dNotFoundDesc").textContent = "该社媒链接可能在 Danbooru 收录的名称不同，或尚未收录。您可以直接在 D 站按标签「" + cleanTag + "」搜索，或直接以此名称入库后粘贴截图。";
 
   var directBtn = document.getElementById("dNotFoundDirectSearchBtn");
   if (directBtn) directBtn.href = "https://danbooru.donmai.us/posts?tags=" + encodeURIComponent(cleanTag);
@@ -2251,7 +2604,9 @@ function renderDanbooruNotFound(rawQuery, cleanTag) {
         url: makeDanbooruUrl(cleanTag),
         category: currentCategory || "",
         tags: [],
-        postCount: null
+        postCount: null,
+        imageIds: [],
+        images: []
       };
       artists.unshift(newArtist);
       save();
@@ -2352,7 +2707,9 @@ function addArtist() {
         url: makeDanbooruUrl(artistName),
         category: currentCategory || "",
         tags: profile && Array.isArray(profile.other_names) ? profile.other_names : [],
-        postCount: null
+        postCount: null,
+        imageIds: [],
+        images: []
       };
       artists.unshift(newArtist);
       save();
@@ -2384,7 +2741,9 @@ function addArtist() {
             url: item.url,
             category: currentCategory || "",
             tags: [],
-            postCount: null
+            postCount: null,
+            imageIds: [],
+            images: []
           };
           artists.unshift(entry);
           addedCount++;
@@ -2424,7 +2783,9 @@ function addArtist() {
     url: parsed.url,
     category: currentCategory || "",
     tags: [],
-    postCount: null
+    postCount: null,
+    imageIds: [],
+    images: []
   };
   artists.unshift(newEntry);
   save();
@@ -2445,6 +2806,12 @@ function deleteArtist(artistId) {
   var artist = artists.find(function (a) { return a.id === artistId; });
   var name = artist ? artist.name : "画师";
   if (!confirm("确定要从画师串中删除「" + name + "」吗？")) return;
+
+  if (artist && useIdb && Array.isArray(artist.imageIds)) {
+    artist.imageIds.forEach(function (id) {
+      idbDelete(id).catch(function () {});
+    });
+  }
 
   artists = artists.filter(function (a) { return a.id !== artistId; });
   save();
@@ -2561,6 +2928,72 @@ function closeDropdown() {
   activeDropdown = null;
 }
 
+async function openLightboxForArtist(artist, startIndex) {
+  activeLightboxArtistName = artist.name;
+  activeLightboxIndex = startIndex || 0;
+  activeLightboxList = [];
+
+  var lb = document.getElementById("lightbox");
+  var title = document.getElementById("lightboxTitle");
+  var badge = document.getElementById("lightboxIndex");
+  var img = document.getElementById("lightboxImg");
+
+  title.textContent = artist.name + " · 参考图";
+
+  if (useIdb && Array.isArray(artist.imageIds)) {
+    for (var i = 0; i < artist.imageIds.length; i++) {
+      var id = artist.imageIds[i];
+      var blobData = await idbGet(id);
+      var blob = (blobData && blobData.blob) ? blobData.blob : blobData;
+      if (blob) {
+        var url = URL.createObjectURL(blob);
+        activeLightboxList.push({ id: id, url: url });
+      }
+    }
+  } else if (Array.isArray(artist.images)) {
+    activeLightboxList = artist.images.map(function (m) {
+      return { id: m.id, url: m.data };
+    });
+  }
+
+  if (!activeLightboxList.length) return;
+  if (activeLightboxIndex >= activeLightboxList.length) activeLightboxIndex = 0;
+
+  updateLightboxView();
+  lb.classList.remove("hidden");
+}
+
+function updateLightboxView() {
+  if (!activeLightboxList.length) { closeLightbox(); return; }
+  var badge = document.getElementById("lightboxIndex");
+  var img = document.getElementById("lightboxImg");
+  badge.textContent = (activeLightboxIndex + 1) + " / " + activeLightboxList.length;
+  img.src = activeLightboxList[activeLightboxIndex].url;
+}
+
+function lightboxNext() {
+  if (!activeLightboxList.length) return;
+  activeLightboxIndex = (activeLightboxIndex + 1) % activeLightboxList.length;
+  updateLightboxView();
+}
+
+function lightboxPrev() {
+  if (!activeLightboxList.length) return;
+  activeLightboxIndex = (activeLightboxIndex - 1 + activeLightboxList.length) % activeLightboxList.length;
+  updateLightboxView();
+}
+
+function closeLightbox() {
+  var lb = document.getElementById("lightbox");
+  if (lb) lb.classList.add("hidden");
+  activeLightboxList.forEach(function (item) {
+    if (item.url && item.url.startsWith("blob:")) {
+      try { URL.revokeObjectURL(item.url); } catch (e) {}
+    }
+  });
+  activeLightboxList = [];
+}
+
 // =========================================================
 // UI RENDERING (Categories, Cards, Thumbnails)
 // =========================================================
@@ -2663,11 +3096,14 @@ async function fetchArtistArtwork(artist, forceRefresh) {
     .then(function (posts) {
       var list = Array.isArray(posts) ? posts : [];
       var works = list.map(function (post) {
-        var imageUrl = post.preview_file_url || post.large_file_url || post.file_url || "";
-        if (!imageUrl) return null;
+        var candidates = [post.preview_file_url, post.large_file_url, post.file_url]
+          .filter(function (u) { return typeof u === "string" && u.trim(); })
+          .map(function (u) { return u.indexOf("//") === 0 ? "https:" + u : u; });
+        if (!candidates.length) return null;
         return {
           id: post.id,
-          imageUrl: imageUrl,
+          imageUrl: candidates[0],
+          imageCandidates: candidates,
           postUrl: "https://danbooru.donmai.us/posts/" + post.id,
           source: post.source || ""
         };
@@ -2695,13 +3131,13 @@ function appendAutoArtworkSection(card, artist) {
   head.className = "auto-gallery-head";
   var title = document.createElement("div");
   title.className = "auto-gallery-title";
-  title.innerHTML = '<span class="dot"></span><span>画师作品（自动获取）</span>';
+  title.innerHTML = '<span class="dot"></span><span>D 站作品（自动获取）</span>';
   head.appendChild(title);
 
   var refresh = document.createElement("button");
   refresh.type = "button";
   refresh.className = "auto-refresh-btn";
-  refresh.textContent = "刷新";
+  refresh.textContent = "刷新作品";
   refresh.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
@@ -2723,7 +3159,10 @@ function appendAutoArtworkSection(card, artist) {
   reel.style.display = "none";
   wrap.appendChild(reel);
 
-  card.appendChild(wrap);
+  // Put automatic artwork above the user's manual screenshots.
+  var screenshotsContainer = card.querySelector(".screenshots-container");
+  if (screenshotsContainer) card.insertBefore(wrap, screenshotsContainer);
+  else card.appendChild(wrap);
 
   fetchArtistArtwork(artist, false).then(function (works) {
     if (!wrap.isConnected) return;
@@ -2745,14 +3184,29 @@ function appendAutoArtworkSection(card, artist) {
       img.loading = "lazy";
       img.decoding = "async";
       img.alt = artist.name + " D 站作品";
-      img.src = work.imageUrl;
-      img.onerror = function () {
-        if (work.imageUrl !== work.source && work.source && /^https?:\/\//i.test(work.source)) {
-          img.src = work.source;
-        } else {
-          a.innerHTML = '<span class="auto-fallback">图片加载失败<br>点击打开作品</span>';
+      // Desktop browsers can refuse some Danbooru CDN hotlinks. Try the native URL first,
+      // then public image proxies. IMPORTANT: `source` is usually a webpage URL, not an image,
+      // so it must never be used as an <img> fallback.
+      var candidates = (work.imageCandidates || [work.imageUrl]).slice();
+      var current = -1;
+      function nextImage() {
+        current += 1;
+        if (current < candidates.length) {
+          img.src = candidates[current];
+          return;
         }
-      };
+        var raw = candidates[0];
+        var proxies = [
+          "https://images.weserv.nl/?url=" + encodeURIComponent(raw),
+          "https://wsrv.nl/?url=" + encodeURIComponent(raw)
+        ];
+        var proxyIndex = current - candidates.length;
+        if (proxyIndex === 0) { img.src = proxies[0]; return; }
+        if (proxyIndex === 1) { img.src = proxies[1]; return; }
+        a.innerHTML = '<span class="auto-fallback">图片加载失败<br>点击打开作品</span>';
+      }
+      img.onerror = nextImage;
+      nextImage();
       a.appendChild(img);
 
       var idxBadge = document.createElement("span");
@@ -2830,7 +3284,7 @@ function createArtistCardElement(artist) {
   header.appendChild(rightGroup);
   card.appendChild(header);
 
-  // Append Automatic Artwork Section
+  // 仅显示自动获取的 D 站作品，不再提供截图上传功能。
   appendAutoArtworkSection(card, artist);
 
   return card;
@@ -2957,7 +3411,9 @@ function renderAiResults() {
           url: item.url,
           category: currentCategory || "",
           tags: [],
-          postCount: item.postCount
+          postCount: item.postCount,
+          imageIds: [],
+          images: []
         };
         artists.unshift(entry);
         save();
@@ -2993,7 +3449,9 @@ function addAllNewDetectedArtists() {
       url: item.url,
       category: currentCategory || "",
       tags: [],
-      postCount: item.postCount
+      postCount: item.postCount,
+      imageIds: [],
+      images: []
     };
     artists.unshift(entry);
     item.isCollected = true;
@@ -3005,23 +3463,39 @@ function addAllNewDetectedArtists() {
 }
 
 // =========================================================
-// BACKUP & RESTORE
+// BACKUP & RESTORE (Full JSON Export with Images)
 // =========================================================
-function exportData() {
-  showToast("正在打包画师串备份…");
-  var exportList = artists.map(function(a) {
-    return {
-      id: a.id,
-      name: a.name,
-      url: a.url,
-      category: a.category,
-      tags: a.tags,
-      postCount: a.postCount
-    };
-  });
+async function exportData() {
+  showToast("正在打包画师串与所有高清参考图…");
+  var exportList = [];
+
+  for (var i = 0; i < artists.length; i++) {
+    var a = artists[i];
+    var clone = Object.assign({}, a);
+    clone.exportedImages = [];
+
+    if (Array.isArray(a.imageIds)) {
+      for (var j = 0; j < a.imageIds.length; j++) {
+        var key = a.imageIds[j];
+        var blobData = await idbGet(key);
+        var blob = (blobData && blobData.blob) ? blobData.blob : blobData;
+        if (blob) {
+          var dUrl = await blobToDataUrl(blob);
+          clone.exportedImages.push(dUrl);
+        }
+      }
+    }
+    if (Array.isArray(a.images)) {
+      for (var k = 0; k < a.images.length; k++) {
+        var leg = a.images[k];
+        clone.exportedImages.push(leg.data || leg.url || leg);
+      }
+    }
+    exportList.push(clone);
+  }
 
   var payload = {
-    version: 3,
+    version: 2,
     exportTime: new Date().toISOString(),
     categories: categories,
     artists: exportList
@@ -3061,8 +3535,30 @@ async function importData(file) {
         url: item.url || makeDanbooruUrl(item.name),
         category: item.category || "",
         tags: Array.isArray(item.tags) ? item.tags : [],
-        postCount: typeof item.postCount === "number" ? item.postCount : null
+        postCount: typeof item.postCount === "number" ? item.postCount : null,
+        imageIds: [],
+        images: []
       };
+
+      var imgsToImport = item.exportedImages || item.images || [];
+      if (Array.isArray(imgsToImport)) {
+        for (var j = 0; j < imgsToImport.length; j++) {
+          var rawImg = imgsToImport[j];
+          var dUrl = typeof rawImg === "string" ? rawImg : (rawImg.data || rawImg.url);
+          if (dUrl && dUrl.startsWith("data:")) {
+            var blob = await dataUrlToBlob(dUrl);
+            if (blob) {
+              var newImgId = uid();
+              if (useIdb) {
+                await idbPut(newImgId, blob);
+                entry.imageIds.push(newImgId);
+              } else {
+                entry.images.push({ id: newImgId, data: dUrl });
+              }
+            }
+          }
+        }
+      }
 
       artists.push(entry);
       importedCount++;
@@ -3071,7 +3567,7 @@ async function importData(file) {
     save();
     renderCategoriesBar();
     renderFiltered();
-    showToast("🎉 成功恢复 " + importedCount + " 位画师！");
+    showToast("🎉 成功恢复 " + importedCount + " 位画师及其所有参考图！");
   } catch (err) {
     console.error(err);
     showToast("⚠️ 导入失败，请确保是有效的 JSON 备份文件");
@@ -3079,10 +3575,11 @@ async function importData(file) {
 }
 
 function clearAll() {
-  if (confirm("确定要清空全部画师数据吗？该操作不可逆，建议先导出备份！")) {
+  if (confirm("确定要清空全部画师与参考图吗？该操作不可逆，建议先导出备份！")) {
     artists = [];
     categories = [];
     currentCategory = "";
+    if (useIdb) idbClear();
     save();
     renderCategoriesBar();
     renderFiltered();
@@ -3166,7 +3663,7 @@ function bindEventListeners() {
 
   // Header Actions
   document.getElementById("aiScanBtn").addEventListener("click", openAiModal);
-  document.getElementById("refreshCountsBtn").addEventListener("click", refreshAllCounts);
+  document.getElementById("refreshWorksBtn").addEventListener("click", refreshAllArtwork);
   document.getElementById("exportBtn").addEventListener("click", exportData);
   document.getElementById("clearBtn").addEventListener("click", clearAll);
 
@@ -3188,12 +3685,51 @@ function bindEventListeners() {
   document.getElementById("aiDoParseBtn").addEventListener("click", doAiParse);
   document.getElementById("aiAddAllBtn").addEventListener("click", addAllNewDetectedArtists);
 
+  // Lightbox Controls
+  document.getElementById("lightboxClose").addEventListener("click", closeLightbox);
+  document.getElementById("lightboxPrev").addEventListener("click", function (e) { e.stopPropagation(); lightboxPrev(); });
+  document.getElementById("lightboxNext").addEventListener("click", function (e) { e.stopPropagation(); lightboxNext(); });
+  document.getElementById("lightbox").addEventListener("click", function (e) {
+    if (e.target.id === "lightbox" || e.target.classList.contains("lightbox-content")) closeLightbox();
+  });
+
+  // Mobile Swipe for Lightbox
+  var touchStartX = 0;
+  var touchStartY = 0;
+  var lb = document.getElementById("lightbox");
+  if (lb) {
+    lb.addEventListener("touchstart", function (e) {
+      if (e.touches && e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    lb.addEventListener("touchend", function (e) {
+      if (e.changedTouches && e.changedTouches.length === 1) {
+        var dx = e.changedTouches[0].clientX - touchStartX;
+        var dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          if (dx < 0) lightboxNext();
+          else lightboxPrev();
+        }
+      }
+    }, { passive: true });
+  }
+
   // Global Keyboard Shortcuts
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
+      closeLightbox();
       closeAiModal();
       closeDanbooruGallery();
       closeDropdown();
+    } else {
+      var lbEl = document.getElementById("lightbox");
+      if (lbEl && !lbEl.classList.contains("hidden")) {
+        if (e.key === "ArrowLeft") lightboxPrev();
+        else if (e.key === "ArrowRight") lightboxNext();
+      }
     }
   });
 
@@ -3211,10 +3747,21 @@ function bindEventListeners() {
 // =========================================================
 // INITIALIZATION
 // =========================================================
-function init() {
+async function init() {
+  loadCategories();
+  try {
+    await openDb();
+    useIdb = true;
+  } catch (e) {
+    useIdb = false;
+  }
+  if (useIdb) {
+    await migrateLegacy();
+  }
   loadAllDataCompatibility();
   bindEventListeners();
-  render();
+  renderCategoriesBar();
+  renderFiltered();
 }
 
 init();
