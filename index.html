@@ -695,32 +695,6 @@
       display: block;
     }
 
-    .auto-work-thumb {
-      border-color: rgba(124, 168, 255, 0.28);
-    }
-    .auto-work-thumb::after {
-      content: "↗";
-      position: absolute;
-      right: 6px;
-      bottom: 6px;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,.62);
-      color: #fff;
-      font-size: 13px;
-      pointer-events: none;
-    }
-    .auto-work-label {
-      font-size: 10px;
-      color: var(--text-dim);
-      margin: 0 0 5px 2px;
-      white-space: nowrap;
-    }
-
     .thumb-del-btn {
       position: absolute;
       top: 6px;
@@ -824,6 +798,14 @@
     .modal-overlay.hidden, .d-gallery-modal-overlay.hidden, .ai-modal-overlay.hidden, .lightbox.hidden, .hidden {
       display: none !important;
     }
+
+    /* Auto Danbooru artwork previews */
+    .auto-artwork-thumb { position:relative; overflow:hidden; cursor:pointer; }
+    .auto-artwork-thumb .thumb-img { cursor:pointer; }
+    .auto-artwork-badge { position:absolute; left:6px; bottom:6px; padding:2px 6px; border-radius:999px; font-size:10px; line-height:1.2; background:rgba(0,0,0,.68); color:#fff; pointer-events:none; }
+    .auto-artwork-refresh { border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim); border-radius:10px; padding:7px 10px; cursor:pointer; margin-left:8px; }
+    .auto-artwork-refresh:hover { color:#fff; }
+    .auto-artwork-loading { display:flex; align-items:center; justify-content:center; min-width:92px; height:92px; border:1px dashed var(--border); border-radius:12px; color:var(--text-dim); font-size:11px; }
 
     /* Danbooru Direct Jump & Reverse Lookup Modal */
     .d-gallery-modal {
@@ -2099,8 +2081,7 @@ async function migrateLegacy() {
       category: a.category || "",
       tags: Array.isArray(a.tags) ? a.tags : [],
       imageIds: imageIds,
-      postCount: typeof a.postCount === "number" ? a.postCount : null,
-      autoWorks: Array.isArray(a.autoWorks) ? a.autoWorks : []
+      postCount: typeof a.postCount === "number" ? a.postCount : null
     });
   }
   artists = migrated;
@@ -2162,49 +2143,6 @@ async function fetchPostCount(tag) {
     }
   } catch (e) {}
   return null;
-}
-
-// Automatically fetch public Danbooru works for an artist and use them as homepage previews.
-// These are not stored in IndexedDB; only lightweight metadata/URLs are cached in the artist object.
-async function fetchArtistWorks(tag, limit) {
-  if (!tag) return [];
-  var cleanTag = String(tag).trim().replace(/\s+/g, "_");
-  var n = limit || 12;
-  var apiUrl = "https://danbooru.donmai.us/posts.json?tags=" + encodeURIComponent(cleanTag) + "&limit=" + n + "&only=id,preview_file_url,large_file_url,file_url";
-  try {
-    var res = await fetch(apiUrl, { mode: "cors" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    var posts = await res.json();
-    if (!Array.isArray(posts)) return [];
-    return posts.map(function (post) {
-      var image = post.preview_file_url || post.large_file_url || post.file_url;
-      if (!image || !post.id) return null;
-      return {
-        id: post.id,
-        image: image,
-        url: "https://danbooru.donmai.us/posts/" + post.id
-      };
-    }).filter(Boolean);
-  } catch (e) {
-    console.warn("Danbooru 作品获取失败:", tag, e);
-    return [];
-  }
-}
-
-function ensureArtistAutoWorks(artist, card) {
-  if (!artist || artist._autoWorksLoading || (Array.isArray(artist.autoWorks) && artist.autoWorks.length)) return;
-  artist._autoWorksLoading = true;
-  var reel = card ? card.querySelector(".screenshots-reel") : null;
-  fetchArtistWorks(artist.name, 12).then(function (works) {
-    artist._autoWorksLoading = false;
-    if (works.length) {
-      artist.autoWorks = works;
-      save();
-    }
-    render();
-  }).catch(function () {
-    artist._autoWorksLoading = false;
-  });
 }
 
 async function refreshArtistCount(artist, countEl) {
@@ -2603,8 +2541,7 @@ function renderDanbooruHubCard(profile, postCount) {
           tags: Array.isArray(profile.other_names) ? profile.other_names : [],
           postCount: typeof postCount === "number" ? postCount : null,
           imageIds: [],
-          images: [],
-          autoWorks: []
+          images: []
         };
         artists.unshift(newArtist);
         save();
@@ -2655,8 +2592,7 @@ function renderDanbooruNotFound(rawQuery, cleanTag) {
         tags: [],
         postCount: null,
         imageIds: [],
-        images: [],
-        autoWorks: []
+        images: []
       };
       artists.unshift(newArtist);
       save();
@@ -2759,8 +2695,7 @@ function addArtist() {
         tags: profile && Array.isArray(profile.other_names) ? profile.other_names : [],
         postCount: null,
         imageIds: [],
-        images: [],
-        autoWorks: []
+        images: []
       };
       artists.unshift(newArtist);
       save();
@@ -2794,8 +2729,7 @@ function addArtist() {
             tags: [],
             postCount: null,
             imageIds: [],
-            images: [],
-            autoWorks: []
+            images: []
           };
           artists.unshift(entry);
           addedCount++;
@@ -2837,8 +2771,7 @@ function addArtist() {
     tags: [],
     postCount: null,
     imageIds: [],
-    images: [],
-    autoWorks: []
+    images: []
   };
   artists.unshift(newEntry);
   save();
@@ -3191,6 +3124,66 @@ function updateSingleArtistCard(artistId) {
   oldCard.parentElement.replaceChild(newCard, oldCard);
 }
 
+async function fetchDanbooruArtworkPreview(artist, limit) {
+  limit = limit || 12;
+  var tag = String(artist.name || "").trim().replace(/\s+/g, "_");
+  if (!tag) return [];
+  var url = "https://danbooru.donmai.us/posts.json?tags=" + encodeURIComponent(tag) + "+-animated&limit=" + limit + "&only=id,preview_file_url,large_file_url,file_url";
+  try {
+    var res = await fetch(url, { mode: "cors", cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var posts = await res.json();
+    if (!Array.isArray(posts)) return [];
+    return posts.filter(function(p){ return p && p.id && (p.preview_file_url || p.large_file_url || p.file_url); }).map(function(p){
+      return {
+        id: p.id,
+        preview: p.preview_file_url || p.large_file_url || p.file_url,
+        large: p.large_file_url || p.file_url || p.preview_file_url,
+        url: "https://danbooru.donmai.us/posts/" + p.id
+      };
+    });
+  } catch (e) {
+    console.warn("Danbooru 自动作品获取失败:", artist.name, e);
+    return [];
+  }
+}
+
+function renderAutoDanbooruArtworks(artist, reel, addThumbBtn) {
+  var old = reel.querySelectorAll(".auto-artwork-thumb, .auto-artwork-loading, .auto-artwork-error");
+  old.forEach(function(el){ el.remove(); });
+
+  var loading = document.createElement("div");
+  loading.className = "auto-artwork-loading";
+  loading.textContent = "正在获取作品…";
+  reel.insertBefore(loading, addThumbBtn);
+
+  fetchDanbooruArtworkPreview(artist, 12).then(function(posts){
+    loading.remove();
+    if (!posts.length) return;
+    posts.forEach(function(post){
+      var thumb = document.createElement("div");
+      thumb.className = "thumb-card auto-artwork-thumb";
+      thumb.title = "打开 D 站作品 #" + post.id;
+      var img = document.createElement("img");
+      img.className = "thumb-img";
+      img.alt = artist.name + " D 站作品";
+      img.loading = "lazy";
+      img.referrerPolicy = "no-referrer";
+      img.src = post.preview;
+      img.onerror = function(){ thumb.remove(); };
+      thumb.addEventListener("click", function(){
+        window.open(post.url, "_blank", "noopener,noreferrer");
+      });
+      var badge = document.createElement("span");
+      badge.className = "auto-artwork-badge";
+      badge.textContent = "D 站";
+      thumb.appendChild(img);
+      thumb.appendChild(badge);
+      reel.insertBefore(thumb, addThumbBtn);
+    });
+  });
+}
+
 function createArtistCardElement(artist) {
   var card = document.createElement("div");
   card.id = "artist-card-" + artist.id;
@@ -3279,29 +3272,6 @@ function createArtistCardElement(artist) {
   var reel = document.createElement("div");
   reel.className = "screenshots-reel";
 
-  // Automatically fetched Danbooru works (clickable, no manual screenshot required).
-  if (Array.isArray(artist.autoWorks) && artist.autoWorks.length) {
-    artist.autoWorks.forEach(function (work) {
-      var thumb = document.createElement("div");
-      thumb.className = "thumb-card auto-work-thumb";
-      thumb.title = "打开 Danbooru 原作品";
-
-      var imgEl = document.createElement("img");
-      imgEl.className = "thumb-img";
-      imgEl.alt = artist.name + " 作品";
-      imgEl.loading = "lazy";
-      imgEl.referrerPolicy = "no-referrer";
-      imgEl.src = work.image;
-      imgEl.onerror = function () { thumb.remove(); };
-      thumb.appendChild(imgEl);
-
-      thumb.addEventListener("click", function () {
-        window.open(work.url, "_blank", "noopener,noreferrer");
-      });
-      reel.appendChild(thumb);
-    });
-  }
-
   if (useIdb) {
     (artist.imageIds || []).forEach(function (imgId, idx) {
       var thumb = document.createElement("div");
@@ -3363,11 +3333,11 @@ function createArtistCardElement(artist) {
   addThumbBtn.addEventListener("click", function () { triggerImageUpload(artist.id); });
   reel.appendChild(addThumbBtn);
 
+  // 自动展示该画师在 Danbooru 的作品；不改动原有截图数据。
+  renderAutoDanbooruArtworks(artist, reel, addThumbBtn);
+
   screenshotsContainer.appendChild(reel);
   card.appendChild(screenshotsContainer);
-
-  // If no cached works exist yet, fetch them automatically for this homepage card.
-  ensureArtistAutoWorks(artist, card);
 
   // Card Paste Support
   card.tabIndex = 0;
@@ -3513,8 +3483,7 @@ function renderAiResults() {
           tags: [],
           postCount: item.postCount,
           imageIds: [],
-          images: [],
-          autoWorks: []
+          images: []
         };
         artists.unshift(entry);
         save();
@@ -3638,8 +3607,7 @@ async function importData(file) {
         tags: Array.isArray(item.tags) ? item.tags : [],
         postCount: typeof item.postCount === "number" ? item.postCount : null,
         imageIds: [],
-        images: [],
-        autoWorks: []
+        images: []
       };
 
       var imgsToImport = item.exportedImages || item.images || [];
